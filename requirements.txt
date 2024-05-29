@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+gunicorn
+feedparser
+jinja2
+sqlalchemy
