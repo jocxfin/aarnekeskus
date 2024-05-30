@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI, Depends, Request, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -28,8 +29,48 @@ category_translation = {
 }
 
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     init_db()
+    asyncio.create_task(fetch_and_update_feed())
+
+async def fetch_and_update_feed():
+    while True:
+        feed = feedparser.parse('https://www.peto-media.fi/tiedotteet/rss.xml')
+        db = SessionLocal()
+        for entry in feed.entries:
+            pub_date = datetime.datetime(*entry.published_parsed[:6])
+            category = "other"
+            if "tieliikenneonnettomuus" in entry.title:
+                category = "traffic"
+            elif "rakennuspalo" in entry.title or "liikennevälinepalo" in entry.title:
+                category = "fire"
+            elif "tulipalo" in entry.title:
+                category = "fire"
+            elif "palohälytys" in entry.title:
+                category = "alarm"
+            elif "maastopalo" in entry.title:
+                category = "wildfire"
+            elif "savuhavainto" in entry.title:
+                category = "smoke"
+            elif "öljyvah." in entry.title or "ymp.onnet." in entry.title:
+                category = "spill"
+            elif "eläimen pelastaminen" in entry.title:
+                category = "animal_rescue"
+            elif "ihmisen pelastaminen" in entry.title:
+                category = "human_rescue"
+            elif "vahingontorjunta" in entry.title:
+                category = "damage_control"
+            db_item = schemas.FeedItemCreate(
+                title=entry.title,
+                description=entry.description,
+                link=entry.link,
+                pub_date=pub_date,
+                category=category,
+                city=entry.title.split("/")[0].strip()
+            )
+            crud.create_feed_item(db, db_item)
+        db.close()
+        await asyncio.sleep(30)  # Wait for 30 seconds before the next fetch
 
 def get_db():
     db = SessionLocal()
@@ -45,40 +86,6 @@ def read_feed(
     city: str = Query(default=""),
     db: Session = Depends(get_db)
 ):
-    feed = feedparser.parse('https://www.peto-media.fi/tiedotteet/rss.xml')
-    for entry in feed.entries:
-        pub_date = datetime.datetime(*entry.published_parsed[:6])
-        category = "other"
-        if "tieliikenneonnettomuus" in entry.title:
-            category = "traffic"
-        elif "rakennuspalo" in entry.title or "liikennevälinepalo" in entry.title:
-            category = "fire"
-        elif "tulipalo" in entry.title:
-            category = "fire"
-        elif "palohälytys" in entry.title:
-            category = "alarm"
-        elif "maastopalo" in entry.title:
-            category = "wildfire"
-        elif "savuhavainto" in entry.title:
-            category = "smoke"
-        elif "öljyvah." in entry.title or "ymp.onnet." in entry.title:
-            category = "spill"
-        elif "eläimen pelastaminen" in entry.title:
-            category = "animal_rescue"
-        elif "ihmisen pelastaminen" in entry.title:
-            category = "human_rescue"
-        elif "vahingontorjunta" in entry.title:
-            category = "damage_control"
-        db_item = schemas.FeedItemCreate(
-            title=entry.title,
-            description=entry.description,
-            link=entry.link,
-            pub_date=pub_date,
-            category=category,
-            city=entry.title.split("/")[0].strip()
-        )
-        crud.create_feed_item(db, db_item)
-    
     items = crud.get_feed_items(db, categories, city)
     categories_in_db = crud.get_categories(db)
     cities_in_db = crud.get_cities(db)
