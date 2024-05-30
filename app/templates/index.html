@@ -1,48 +1,69 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fi">
 <head>
     <meta charset="UTF-8">
-    <title>Pelastustoimen Mediaseuranta</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aarnekeskus</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
 </head>
 <body>
-<div class="container">
-    <h1>Pelastustoimen Mediaseuranta</h1>
-    <form method="get" class="filter-form">
-        <div class="form-group">
-            <label for="categories">Kategoriat:</label>
-            <select id="categories" name="categories" multiple>
-                <option value="">Kaikki</option>
-                {% for key, value in categories %}
-                <option value="{{ key }}" {% if key in selected_categories %}selected{% endif %}>{{ value }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="city">Kaupunki:</label>
-            <select id="city" name="city">
-                <option value="">Kaikki</option>
-                {% for city in cities %}
-                <option value="{{ city[0] }}" {% if city[0] == selected_city %}selected{% endif %}>{{ city[0] }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <button type="submit" class="btn">Suodata</button>
-    </form>
-    <div class="items">
-        {% for item in items %}
-        <div class="item">
-            <div class="icon">
-                <img src="{{ url_for('static', filename='icons/' + item.category + '.png') }}" alt="{{ item.category }}">
+    <div class="container">
+        <h1>Aarnekeskus</h1>
+        <h2>Reaaliaikaista dataa pelastustoimen mediakeskuksesta.</h2>
+        <form method="get" class="filter-form">
+            <div class="form-group">
+                <label for="categories">Kategoriat:</label>
+                <select name="categories" id="categories" multiple>
+                    {% for category in categories %}
+                    <option value="{{ category[0] }}" {% if category[0] in selected_categories %}selected{% endif %}>{{ category[1] }}</option>
+                    {% endfor %}
+                </select>
             </div>
-            <div class="details">
-                <div class="title">{{ item.title }}</div>
-                <div class="description">{{ item.description }}</div>
-                <div class="pubDate">{{ item.pub_date }}</div>
+            <div class="form-group">
+                <label for="city">Kaupunki:</label>
+                <select name="city" id="city">
+                    <option value="">Kaikki</option>
+                    {% for city in cities %}
+                    <option value="{{ city[0] }}" {% if city[0] == selected_city %}selected{% endif %}>{{ city[0] }}</option>
+                    {% endfor %}
+                </select>
             </div>
+            <button type="submit" class="btn">Suodata</button>
+        </form>
+        <div class="items">
+            {% for item in items %}
+            <div class="item">
+                <div class="icon">
+                    {% if item.category == "traffic" %}
+                    <img src="{{ url_for('static', path='icons/traffic.png') }}" alt="Tieliikenneonnettomuus">
+                    {% elif item.category == "fire" %}
+                    <img src="{{ url_for('static', path='icons/fire.png') }}" alt="Tulipalo">
+                    {% elif item.category == "alarm" %}
+                    <img src="{{ url_for('static', path='icons/alarm.png') }}" alt="Palohälytys">
+                    {% elif item.category == "wildfire" %}
+                    <img src="{{ url_for('static', path='icons/wildfire.png') }}" alt="Maastopalo">
+                    {% elif item.category == "smoke" %}
+                    <img src="{{ url_for('static', path='icons/smoke.png') }}" alt="Savuhavainto">
+                    {% elif item.category == "spill" %}
+                    <img src="{{ url_for('static', path='icons/spill.png') }}" alt="Öljyvahinko">
+                    {% elif item.category == "animal_rescue" %}
+                    <img src="{{ url_for('static', path='icons/animal_rescue.png') }}" alt="Eläimen pelastaminen">
+                    {% elif item.category == "human_rescue" %}
+                    <img src="{{ url_for('static', path='icons/human_rescue.png') }}" alt="Ihmisen pelastaminen">
+                    {% elif item.category == "damage_control" %}
+                    <img src="{{ url_for('static', path='icons/damage_control.png') }}" alt="Vahingontorjunta">
+                    {% else %}
+                    <img src="{{ url_for('static', path='icons/other.png') }}" alt="Muu">
+                    {% endif %}
+                </div>
+                <div class="details">
+                    <div class="title">{{ item.title }}</div>
+                    <div class="description">{{ item.description }}</div>
+                    <div class="pubDate">{{ item.pub_date }}</div>
+                </div>
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
-</div>
 </body>
 </html>
