@@ -1,4 +1,3 @@
-import asyncio
 from fastapi import FastAPI, Depends, Request, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,6 +7,7 @@ import feedparser
 import datetime
 from . import crud, models, schemas
 from .database import SessionLocal, init_db
+import asyncio
 
 app = FastAPI()
 
@@ -31,12 +31,17 @@ category_translation = {
 @app.on_event("startup")
 async def on_startup():
     init_db()
-    asyncio.create_task(fetch_and_update_feed())
+    asyncio.create_task(update_feed_periodically())
 
-async def fetch_and_update_feed():
+async def update_feed_periodically():
     while True:
+        await update_feed()
+        await asyncio.sleep(30)  # 30 sekunnin välein
+
+async def update_feed():
+    db = SessionLocal()
+    try:
         feed = feedparser.parse('https://www.peto-media.fi/tiedotteet/rss.xml')
-        db = SessionLocal()
         for entry in feed.entries:
             pub_date = datetime.datetime(*entry.published_parsed[:6])
             category = "other"
@@ -61,7 +66,6 @@ async def fetch_and_update_feed():
             elif "vahingontorjunta" in entry.title:
                 category = "damage_control"
             
-            # Check for duplicates
             existing_item = crud.get_feed_item_by_title_and_date(db, entry.title, pub_date)
             if not existing_item:
                 db_item = schemas.FeedItemCreate(
@@ -73,8 +77,8 @@ async def fetch_and_update_feed():
                     city=entry.title.split("/")[0].strip()
                 )
                 crud.create_feed_item(db, db_item)
+    finally:
         db.close()
-        await asyncio.sleep(30)
 
 def get_db():
     db = SessionLocal()
