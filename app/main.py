@@ -60,17 +60,21 @@ async def fetch_and_update_feed():
                 category = "human_rescue"
             elif "vahingontorjunta" in entry.title:
                 category = "damage_control"
-            db_item = schemas.FeedItemCreate(
-                title=entry.title,
-                description=entry.description,
-                link=entry.link,
-                pub_date=pub_date,
-                category=category,
-                city=entry.title.split("/")[0].strip()
-            )
-            crud.create_feed_item(db, db_item)
+            
+            # Check for duplicates
+            existing_item = crud.get_feed_item_by_title_and_date(db, entry.title, pub_date)
+            if not existing_item:
+                db_item = schemas.FeedItemCreate(
+                    title=entry.title,
+                    description=entry.description,
+                    link=entry.link,
+                    pub_date=pub_date,
+                    category=category,
+                    city=entry.title.split("/")[0].strip()
+                )
+                crud.create_feed_item(db, db_item)
         db.close()
-        await asyncio.sleep(30)  # Wait for 30 seconds before the next fetch
+        await asyncio.sleep(30)
 
 def get_db():
     db = SessionLocal()
